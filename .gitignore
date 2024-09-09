@@ -1,0 +1,7 @@
+**/data
+**/checkpoints
+**/CORA/mDPR/embeddings_multilingual
+**/CORA/mDPR/retrieved_docs
+**/scripts/C
+**/C
+**/**/__pycache__

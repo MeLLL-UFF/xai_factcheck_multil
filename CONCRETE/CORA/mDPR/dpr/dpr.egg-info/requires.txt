@@ -1,0 +1,9 @@
+torch
+transformers
+faiss-cpu
+tqdm
+numpy
+scipy
+scikit-learn
+pandas
+ujson
