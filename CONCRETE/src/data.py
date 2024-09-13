@@ -1,4 +1,6 @@
 import unicodedata
+
+from numpy import nan
 import torch
 from torch.utils.data import Dataset
 from transformers import AutoTokenizer
@@ -8,17 +10,21 @@ from constants import LANG_CODE2COUNTRY, MONOLINGUAL_LANGUAGES
 from utils import read_data
 import re
 
+
 def normalize_text(text):
     if isinstance(text, str):
         return unicodedata.normalize('NFKC', text)
     return text
 
+
 def clean_text(text):
-    if isinstance(text, str):  # Verifique se o texto é uma string
+    if isinstance(text, str):
+        text = text.replace(' ', ' ')
         text = re.sub(r'[^\w\s]', '', text)
         text = re.sub(r'\s+', ' ', text).strip()
         return text
     return text
+
 
 class PropaFakeDataset(Dataset):
     def __init__(self, tsv_path, retrieved_path, args, label2idx, idx2label, is_train_dev=False):
@@ -26,92 +32,108 @@ class PropaFakeDataset(Dataset):
 
         self.data = []
         df, encoding = read_data(tsv_path)
-        all_retrieved_docs = json.load(open(retrieved_path, 'r', encoding=encoding))
+        all_retrieved_docs = json.load(
+            open(retrieved_path, 'r', encoding=encoding))
         for row, retrieved_docs in zip(df.itertuples(), all_retrieved_docs):
             if row.label not in label2idx.keys():
-                #print(f"Label {row.label} not found in label2idx")
+                # print(f"Label {row.label} not found in label2idx")
                 label = 6
             elif row.label == "partly truemisleading":
-                #print(f"broken text: partly true/misleading")
+                # print(f"broken text: partly true/misleading")
                 label = 1
             elif row.label == "complicatedhard to categorise":
-                #print(f"broken text: complicated/hard to categorise")
+                # print(f"broken text: complicated/hard to categorise")
                 label = 5
             else:
-                #print(f"Original label: {row.label}, label2idx: {label2idx[row.label]}")
+                # print(f"Original label: {row.label}, label2idx: {label2idx[row.label]}")
                 label = label2idx[row.label]
             claim_language = row.language
             normalized_claim = normalize_text(clean_text(row.claim))
-            normalized_question = normalize_text(clean_text(retrieved_docs['question']))
-            print("-------------------------------- current row:",row)
-            print("-------------------------------- retrieved doc:", retrieved_docs)
-            print('---------------------------------------------------------------------------------')
-            print(f"normalized_claim:{normalized_claim}, normalized_question:{normalized_question}")
-
-            assert normalized_claim == normalized_question, (normalized_claim, normalized_question)
+            normalized_question = normalize_text(
+                clean_text(retrieved_docs['question']))
+            print("------------------------------------row:",row)
+            filtered_data = {key: value for key, value in retrieved_docs.items() if key != 'ctxs'}
+            print("------------------------------------question w/o ctx:",filtered_data)
+            assert normalized_claim == normalized_question, (
+                normalized_claim, normalized_question)
 
             if args.do_monolingual_eval:
-                
-                if claim_language not in MONOLINGUAL_LANGUAGES: continue
-                
+
+                if claim_language not in MONOLINGUAL_LANGUAGES:
+                    continue
+
                 # in monolingual retrieval setup, we can only train/test on data that are in the passage collection
                 if args.do_monolingual_retrieval:
-                    retrieved_docs['ctxs'] = [ctx for ctx in retrieved_docs['ctxs'] if ctx['id'][:2] == claim_language]
-                
-            if len(args.training_subset_langs) > 0 and is_train_dev:
-                
-                if claim_language not in args.training_subset_langs: continue
+                    retrieved_docs['ctxs'] = [
+                        ctx for ctx in retrieved_docs['ctxs'] if ctx['id'][:2] == claim_language]
 
-            top_k_candidates = [passage['text'].split('<sep>')[1] for passage in retrieved_docs['ctxs'][:args.n_candidates]]
-            top_k_candidates += [''] * (args.n_candidates - len(top_k_candidates))
-            assert len(top_k_candidates) == args.n_candidates, len(top_k_candidates)
+            if len(args.training_subset_langs) > 0 and is_train_dev:
+
+                if claim_language not in args.training_subset_langs:
+                    continue
+
+            top_k_candidates = [passage['text'].split(
+                '<sep>')[1] for passage in retrieved_docs['ctxs'][:args.n_candidates]]
+            top_k_candidates += [''] * \
+                (args.n_candidates - len(top_k_candidates))
+            assert len(top_k_candidates) == args.n_candidates, len(
+                top_k_candidates)
             # top_k_candidates_string = self.tokenizer.sep_token.join(top_k_candidates)
             # inputs = self.tokenizer(row.claim , max_length=args.max_sequence_length, padding="max_length", truncation=True)
             inputs_string = f"Claim made by {row.claimant} on {row.claimDate.split('T')[0]}, reported in {LANG_CODE2COUNTRY[row.language]}: {row.claim}"
 
             if args.disable_retrieval:
-                
-                inputs = self.tokenizer(inputs_string , max_length=args.max_sequence_length, padding="max_length", truncation=True)
+
+                inputs = self.tokenizer(
+                    inputs_string, max_length=args.max_sequence_length, padding="max_length", truncation=True)
                 top_k_candidates = [''] * args.n_candidates
-                candidates = self.tokenizer(top_k_candidates, max_length=args.max_sequence_length, padding="max_length", truncation=True)
+                candidates = self.tokenizer(
+                    top_k_candidates, max_length=args.max_sequence_length, padding="max_length", truncation=True)
             elif args.use_google_search:
-                top_k_candidates = [row.evidence_1, row.evidence_2, row.evidence_3, row.evidence_4, row.evidence_5]
-                top_k_candidates = [str(candidate) for candidate in top_k_candidates]
-                inputs = self.tokenizer(inputs_string, max_length=args.max_sequence_length, padding="max_length", truncation=True)
-                candidates = self.tokenizer(top_k_candidates, max_length=args.max_sequence_length, padding="max_length", truncation=True)
+                top_k_candidates = [row.evidence_1, row.evidence_2,
+                                    row.evidence_3, row.evidence_4, row.evidence_5]
+                top_k_candidates = [str(candidate)
+                                    for candidate in top_k_candidates]
+                inputs = self.tokenizer(
+                    inputs_string, max_length=args.max_sequence_length, padding="max_length", truncation=True)
+                candidates = self.tokenizer(
+                    top_k_candidates, max_length=args.max_sequence_length, padding="max_length", truncation=True)
             else:
                 # inputs_string = self.tokenizer.sep_token.join([row.language, row.site, row.claimant, row.claim, top_k_candidates_string])
                 # inputs_string = f"Reported in {LANG_CODE2COUNTRY[row.language]}: {row.claim}"
-                
-                inputs_string = inputs_string #+ self.tokenizer.sep_token #+ top_k_candidates_string
-                inputs = self.tokenizer(inputs_string, max_length=args.max_sequence_length, padding="max_length", truncation=True)
-                candidates = self.tokenizer(top_k_candidates, max_length=args.max_sequence_length, padding="max_length", truncation=True)
-            
+
+                # + self.tokenizer.sep_token #+ top_k_candidates_string
+                inputs_string = inputs_string
+                inputs = self.tokenizer(
+                    inputs_string, max_length=args.max_sequence_length, padding="max_length", truncation=True)
+                candidates = self.tokenizer(
+                    top_k_candidates, max_length=args.max_sequence_length, padding="max_length", truncation=True)
+
             # candidates = self.tokenizer(top_k_candidates_string, max_length=args.max_sequence_length, padding="max_length", truncation=True)
             self.data.append({
-                'input_ids':inputs['input_ids'],
+                'input_ids': inputs['input_ids'],
                 'attention_mask': inputs['attention_mask'],
                 'candidate_input_ids': candidates['input_ids'],
                 'candidate_attention_mask': candidates['attention_mask'],
                 'label': label
             })
-            
-        
 
     def __len__(self):
         # 200K datapoints
         return len(self.data)
 
     def __getitem__(self, idx):
-        
+
         return self.data[idx]['input_ids'], self.data[idx]['attention_mask'], self.data[idx]['candidate_input_ids'], self.data[idx]['candidate_attention_mask'], self.data[idx]['label']
-    
+
     def collate_fn(self, batch):
         # print(batch)
         input_ids = torch.cuda.LongTensor([inst[0] for inst in batch])
         attention_masks = torch.cuda.LongTensor([inst[1]for inst in batch])
-        candidate_input_ids = torch.cuda.LongTensor([inst[2] for inst in batch])
-        candidate_attention_masks = torch.cuda.LongTensor([inst[3]for inst in batch])
+        candidate_input_ids = torch.cuda.LongTensor(
+            [inst[2] for inst in batch])
+        candidate_attention_masks = torch.cuda.LongTensor(
+            [inst[3]for inst in batch])
         labels = torch.cuda.LongTensor([inst[4]for inst in batch])
 
         return input_ids, attention_masks, candidate_input_ids, candidate_attention_masks, labels
