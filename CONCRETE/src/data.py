@@ -36,16 +36,12 @@ class PropaFakeDataset(Dataset):
             open(retrieved_path, 'r', encoding=encoding))
         for row, retrieved_docs in zip(df.itertuples(), all_retrieved_docs):
             if row.label not in label2idx.keys():
-                # print(f"Label {row.label} not found in label2idx")
                 label = 6
             elif row.label == "partly truemisleading":
-                # print(f"broken text: partly true/misleading")
                 label = 1
             elif row.label == "complicatedhard to categorise":
-                # print(f"broken text: complicated/hard to categorise")
                 label = 5
             else:
-                # print(f"Original label: {row.label}, label2idx: {label2idx[row.label]}")
                 label = label2idx[row.label]
             claim_language = row.language
             normalized_claim = normalize_text(clean_text(row.claim))
@@ -53,7 +49,10 @@ class PropaFakeDataset(Dataset):
                 clean_text(retrieved_docs['question']))
             print("------------------------------------row:",row)
             filtered_data = {key: value for key, value in retrieved_docs.items() if key != 'ctxs'}
-            print("------------------------------------question w/o ctx:",filtered_data)
+
+            for key, value in filtered_data.items():
+                print(f"-------------------------key:{key},-----------value in filtered_data:{value}")
+            
             assert normalized_claim == normalized_question, (
                 normalized_claim, normalized_question)
 
