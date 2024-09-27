@@ -47,12 +47,6 @@ class PropaFakeDataset(Dataset):
             normalized_claim = normalize_text(clean_text(row.claim))
             normalized_question = normalize_text(
                 clean_text(retrieved_docs['question']))
-            print("------------------------------------row:",row)
-            filtered_data = {key: value for key, value in retrieved_docs.items() if key != 'ctxs'}
-
-            for key, value in filtered_data.items():
-                print(f"-------------------------key:{key},-----------value in filtered_data:{value}")
-            
             assert normalized_claim == normalized_question, (
                 normalized_claim, normalized_question)
 

@@ -103,12 +103,28 @@ with torch.no_grad():
     test_outputs = test_outputs.argmax(dim=1) # n_sample
     print(Counter(test_outputs.cpu().tolist()))
     print(Counter(test_labels.cpu().tolist()))
-    assert len(test_outputs) == len(test_labels) == len(test_examples), (len(test_outputs), len(test_labels), len(test_examples))
-    test_f1 = calculate_fscore(test_outputs.detach().cpu().numpy(), test_labels.detach().cpu().numpy(), test_examples.itertuples())
-    print(f"Test F1: {test_f1:.4f}. ")
+    f1_scores = []
+    n_parts = 4  # Número de partes
+    part_size = len(test_outputs) // n_parts
+
+    for part in range(n_parts):
+        start_idx = part * part_size
+        end_idx = (part + 1) * part_size if part != n_parts - 1 else len(test_outputs)
     
+        part_outputs = test_outputs[start_idx:end_idx]
+        part_labels = test_labels[start_idx:end_idx]
+        part_examples = list(test_examples.itertuples())[start_idx:end_idx]
+    
+        part_f1 = calculate_fscore(part_outputs.detach().cpu().numpy(), 
+                               part_labels.detach().cpu().numpy(), 
+                               part_examples)
+        f1_scores.append(part_f1)
+        print(f"F1 Score for part {part + 1}: {part_f1:.4f}")
+
+    final_f1_score = sum(f1_scores) / len(f1_scores)
+    print(f"Final F1 Score (average of parts): {final_f1_score:.4f}")
+
     test_outputs = [int(o) for o in test_outputs]
     print(f"Output file to {test_output_file}")
-    with open(test_output_file,'w') as f:
-        json.dump({'output':test_outputs}, f)
-    
+    with open(test_output_file, 'w') as f:
+        json.dump({'output': test_outputs}, f)

@@ -26,12 +26,11 @@ def process_dataframe(file_name, encoding):
             content = []
             for line in file.readlines():
                 content.append(clean_text(line.decode(encoding=encoding)))
-        
         buffer = io.StringIO("\n".join(content))
 
         df = pd.read_csv(buffer, 
                 delimiter='\t',
-                encoding=encoding
+                encoding=encoding,
                 )
         return df
     except Exception as e:
