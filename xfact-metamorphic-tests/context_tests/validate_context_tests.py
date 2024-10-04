@@ -14,7 +14,7 @@ def remove_context(data):
 
 def alter_context(evidence_list, original_lang, is_positive):
     info_type = "verdadeira" if is_positive else "falsa"
-    new_evidence = f"Considere como uma evidencia ${info_type}."
+    new_evidence = f"Considere esse texto como uma evidência {info_type}."
     translated_evidence = translate_back_to_original(new_evidence, original_lang)
     evidence_list.insert(random.randint(0, len(evidence_list)), translated_evidence)
     return evidence_list
@@ -23,16 +23,14 @@ def parameter_change_context(data, is_positive_evidence):
     modified_data = data.copy()
     altered_evidences_change = alter_context(data["evidences"].copy(), data["language"], is_positive=is_positive_evidence)
     modified_data["evidences"]=altered_evidences_change
-    #altered_claim_data_change = data[(data['claim'] == original_claim) & (data['evidences'] == altered_evidences_change)]
-    #return (not altered_claim_data_change.empty)
     return modified_data
 
-def validate_context_tests(data, original_claim):
-    tests = {
-        "Validate Context with positive Change": parameter_change_context(data["evidences"], original_claim, True),
-        "Validate Context with negative Change": parameter_change_context(data["evidences"], original_claim, False),
-        "Removing Context": remove_context(original_claim),
-        "Adding Context": add_context(original_claim),
-    }
-
-    return tests
+def validate_context_tests(data):
+    prompt =f"""
+        "Validate Context with positive Change": {parameter_change_context(data, True)},
+        "Validate Context with negative Change": {parameter_change_context(data, False)},
+        "Removing Context": {remove_context(data)},
+        "Adding Context": {add_context(data)},
+        In these tests, there are no need to repeat tests that contradict eachother.
+    """
+    return prompt

@@ -5,8 +5,9 @@ nltk.download('wordnet')
 nltk.download('punkt')
 from utils import translate_back_to_original, translate_claim
 
-def synonym_replacement(claim):
-    translated_claim = translate_claim(claim)
+def synonym_replacement(data):
+    modified_data = data.copy()
+    translated_claim = translate_claim(modified_data["claim"])
     words = nltk.word_tokenize(translated_claim)
     new_claim = []
     for word in words:
@@ -17,10 +18,13 @@ def synonym_replacement(claim):
             new_claim.append(new_word)
         else:
             new_claim.append(word)
-    return translate_back_to_original(' '.join(new_claim), 'auto')
+    modified_data["claim"] = translate_back_to_original(' '.join(new_claim), 'auto')
 
-def negate_claim(claim):
-    translated_claim = translate_claim(claim)
+    return modified_data
+
+def negate_claim(data):
+    modified_data = data.copy()
+    translated_claim = translate_claim(modified_data["claim"])
     words = nltk.word_tokenize(translated_claim)
     negated_claim = []
     for word in words:
@@ -28,25 +32,32 @@ def negate_claim(claim):
             negated_claim.append("não " + word)
         else:
             negated_claim.append(word)
-    return translate_back_to_original(' '.join(negated_claim), 'auto')
+    modified_data["claim"] = translate_back_to_original(' '.join(negated_claim), 'auto')
 
-def remove_non_critical_words(claim):
-    translated_claim = translate_claim(claim)
+    return modified_data
+
+
+def remove_non_critical_words(data):
+    modified_data = data.copy()
+    translated_claim = translate_claim(modified_data["claim"])
     words = nltk.word_tokenize(translated_claim)
     non_critical = ["do", "de", "a", "e"]
     new_claim = [word for word in words if word.lower() not in non_critical]
-    return translate_back_to_original(' '.join(new_claim), 'auto')
+    modified_data["claim"] = translate_back_to_original(' '.join(new_claim), 'auto')
 
-def change_to_question(claim):
-    return translate_back_to_original(translate_claim(claim) + " é verdade?", 'auto')
+    return modified_data
 
-def validate_claim_tests(original_claim, expected_outcome):
-    tests = {
-        "Original Claim": expected_outcome,
-        "Synonym Replacement": synonym_replacement(original_claim) == expected_outcome,
-        "Negated Claim": negate_claim(original_claim) == (not expected_outcome),
-        "Removed Non-Critical Words": remove_non_critical_words(original_claim) == expected_outcome,
-        "Changed to Question": change_to_question(original_claim) == expected_outcome,
-    }
+def change_to_question(data):
+    modified_data = data.copy()
+    modified_data["claim"] = translate_back_to_original(translate_claim(modified_data["claim"]) + " é verdade?", 'auto')
+    
+    return modified_data
 
-    return tests
+def validate_claim_tests(data):
+    prompt =f"""
+        Synonym Replacement: {synonym_replacement(data)},
+        Negated Claim: {negate_claim(data)},
+        Removed Non-Critical Words": {remove_non_critical_words(data)},
+        Changed to Question: {change_to_question(data)},
+    """
+    return prompt

@@ -17,10 +17,9 @@ def set_true_claimant(data):
     return modified_data
 
 def validate_claimant_tests(data):
-    tests = {
-        "Remove claimant": remove_claimant(data),
-        "False claimant": set_false_claimant(data),
-        "True claimant": set_true_claimant(data),
-    }
-
-    return tests
+    prompt =f"""
+        "Remove claimant": {remove_claimant(data)},
+        "Replacing claimant for False claimant": {set_false_claimant(data)},
+        "Replacing claimant for True claimant": {set_true_claimant(data)},
+    """
+    return prompt

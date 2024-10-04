@@ -1,61 +1,38 @@
-# dificuldade com numeros e troca de caracteres(numeros) V
-# remoção de contexto, adição de contexto, adição de contexto falso em relação ao resultado esperado
-# adição de contexto falso, adição de contexto negativo
-# alteracao de claim por sinônimo, negação da claim, remoção de palavras, alteração de contexto para pergunta
-# traducao V 
-# expressao (alteracao de entidade nomeada/ dominio da informacao/ apelo a autoridade) V
-# trocar palavra (aleatoriamente/ uma apenas/ categoricamente) V
 # testar testes juntos V
-
 # criar os testes e depois aplicar os testes, se for treinar o modelo novamente. Falar com a Bruna.
-
+import os
 import pandas as pd
 
 from claim_tests import validate_claim_tests
 from context_tests import validate_context_tests
 from claimant_tests import validate_claimant_tests
 from date_tests import validate_date_tests
+from utils import gpt_request, maritaca_request, gemini_request, command_r_request, get_tsv_data, create_result_file, remove_label_column, create_grouped_prompt
 
-"""
-    - Idioma: string
-    - Site:  string
-    - Evidências: []
-    - Links: [] --> nao vamos usar pois pode permitir que modelos que possuem acesso a internet acessem.
-    - Data da alegação: string
-    - Data da revisão: string
-    - Reclamante: string
-    - Alegação: string
-"""
+tsv_file = f"G:\GitHub\apps\mestrado\xai_factcheck_multil\CONCRETE\data\x-fact\zeroshot.tsv"
+json_path = f"G:\GitHub\apps\mestrado\xai_factcheck_multil\xfact-metamorphic-tests\data\zeroshot_tsv.json"
+result_path = f"G:\GitHub\apps\mestrado\xai_factcheck_multil\xfact-metamorphic-tests\data\results.json"
 
-original_claim = "Os EUA compraram 90% do suprimento global de remdesivir."
-expected_outcome = True  # O resultado esperado do claim original
-"""
-    executar 1/3 da base = 270 dados
+data = get_tsv_data(tsv_file,json_path)
+test_data = remove_label_column(data)
 
-"""
-documents = "zeroshot.tsv data/3 com aleatoriedade na hora de pegar os valores"
+results = {
+    "claim Open AI": gpt_request(create_grouped_prompt(data,validate_claim_tests(test_data))),
+    "claim Maritaca AI": maritaca_request(create_grouped_prompt(data,validate_claim_tests(test_data))),
+    "claim Gemini AI": gemini_request(create_grouped_prompt(data,validate_claim_tests(test_data))),
+    "claim Command R": command_r_request(create_grouped_prompt(data,validate_claim_tests(test_data))),
+    "context Open AI": gpt_request(create_grouped_prompt(data,validate_context_tests(test_data))),
+    "context Maritaca AI": maritaca_request(create_grouped_prompt(data,validate_context_tests(test_data))),
+    "context Gemini AI": gemini_request(create_grouped_prompt(data,validate_context_tests(test_data))),
+    "contextCommand R": command_r_request(create_grouped_prompt(data,validate_context_tests(test_data))),
+    "claimant Open AI": gpt_request(create_grouped_prompt(data,validate_claimant_tests(test_data))),
+    "claimant Maritaca AI": maritaca_request(create_grouped_prompt(data,validate_claimant_tests(test_data))),
+    "claimant Gemini AI": gemini_request(create_grouped_prompt(data,validate_claimant_tests(test_data))),
+    "claimant Command R": command_r_request(create_grouped_prompt(data,validate_claimant_tests(test_data))),
+    "date Open AI": gpt_request(create_grouped_prompt(data,validate_date_tests(test_data))),
+    "date Maritaca AI": maritaca_request(create_grouped_prompt(data,validate_date_tests(test_data))),
+    "date Gemini AI": gemini_request(create_grouped_prompt(data,validate_date_tests(test_data))),
+    "date Command R": command_r_request(create_grouped_prompt(data,validate_date_tests(test_data))),
+}
 
-"""for document of documents:
-    executar todos os testes (claim, claimant, label, evidences, claimDate, revDate)
-
-"""   
-
-data = []
-# Validar os testes
-validation_claim_results = validate_claim_tests(data, original_claim, expected_outcome)
-validation__context_results = validate_context_tests(data, original_claim, expected_outcome)
-validation__claimant_results = validate_claimant_tests(data, original_claim, expected_outcome)
-validation__date_results = validate_date_tests(data, original_claim, expected_outcome)
-
-# Exibir os resultados da validação
-for test_name, result in validation_claim_results.items():
-    print(f"{test_name}: {result}")
-
-for test_name, result in validation__context_results.items():
-    print(f"{test_name}: {result}")
-
-for test_name, result in validation__claimant_results.items():
-    print(f"{test_name}: {result}")
-
-for test_name, result in validation__date_results.items():
-    print(f"{test_name}: {result}")
+create_result_file(result_path,results)
