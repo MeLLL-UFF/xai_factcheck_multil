@@ -1,22 +1,26 @@
-def create_grouped_prompt(data, test):
-    prompt = f"""
-    Check the following data and classifies the label. If there are no evidences, You can let it empty.
-    
-    Data:
-    {data}
-    
-    Now, considering that you does not see the original data, applies the following tests and return a label according the new data:
-    {test}
+import maritalk
+import openai
+import google.generativeai as genai
+import os
 
-    Now, creates a scenario considering all the given tests.
+def gpt_request(prompt):
+    openai.api_key = ""
+    response = openai.Completion.create(
+        model="gpt-4o-mini",
+        prompt=prompt,
+        max_tokens=200
+    )
     
-    Return, foreach test, one of the following label:
-    - "true"
-    - "mostly true"
-    - "partly true/misleading"
-    - "complicated/hard to categorise"
-    - "other"
-    - "mostly false"
-    - "false"
-    """
-    return prompt
+    return response['choices'][0]['text'].strip()
+
+def maritaca_request(prompt):
+    model = maritalk.MariTalk(key="api key", model="sabia-2-small")
+    response = model.generate(prompt, max_tokens=200)
+    answer = response["answer"]
+    return answer
+
+def gemini_request(prompt):
+    genai.configure(api_key="")
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    response = model.generate_content(prompt)
+    return response.text
