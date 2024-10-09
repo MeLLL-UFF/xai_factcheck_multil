@@ -4,12 +4,7 @@ from claimant_tests import set_false_claimant, set_true_claimant
 from date_tests import remove_all_date, remove_any_date, change_all_date, change_any_date
 from utils import gpt_request,process_json, maritaca_request, gemini_request, create_result_file, create_grouped_prompt
 
-#tsv_file = f"G:\GitHub\apps\mestrado\xai_factcheck_multil\CONCRETE\data\x-fact\zeroshot.tsv"
-#json_path = f"G:\GitHub\apps\mestrado\xai_factcheck_multil\xfact-metamorphic-tests\data\zeroshot_tsv.json"
 result_path = f"G:\GitHub\apps\mestrado\xai_factcheck_multil\xfact-metamorphic-tests\data\results.json"
-#data = get_tsv_data(tsv_file,json_path)
-#test_data = remove_label_column(data)
-
 json_file_path = f"G:\GitHub\apps\mestrado\xai_factcheck_multil\CONCRETE\CORA\mDPR\retrieved_docs\zeroshot.xict.json"
 data = process_json(json_file_path)
 
@@ -30,8 +25,6 @@ results = {
     "Open AI metamorphic tests with context: Removing random Context": gpt_request(create_grouped_prompt(remove_context(data))),
     "Open AI metamorphic tests with context: Removing All Context": gpt_request(create_grouped_prompt(remove_all_context(data))),
     "Open AI metamorphic tests with context: Adding Context": gpt_request(create_grouped_prompt(add_context(data))),
-
-
     "Maritaca AI without test": maritaca_request(create_grouped_prompt(data)),
     "Maritaca AI metamorphic tests with date: remove all dates": maritaca_request(create_grouped_prompt(remove_all_date(data))),
     "Maritaca AI metamorphic tests with date: remove random date": maritaca_request(create_grouped_prompt(remove_any_date(data))),
@@ -48,7 +41,6 @@ results = {
     "Maritaca AI metamorphic tests with context: Removing random Context": maritaca_request(create_grouped_prompt(remove_context(data))),
     "Maritaca AI metamorphic tests with context: Removing All Context": maritaca_request(create_grouped_prompt(remove_all_context(data))),
     "Maritaca AI metamorphic tests with context: Adding Context": maritaca_request(create_grouped_prompt(add_context(data))),
-
     "Gemini AI without test": gemini_request(create_grouped_prompt(data)),
     "Gemini AI metamorphic tests with date: remove all dates": gemini_request(create_grouped_prompt(remove_all_date(data))),
     "Gemini AI metamorphic tests with date: remove random date": gemini_request(create_grouped_prompt(remove_any_date(data))),
