@@ -14,3 +14,6 @@ Agora temos o ambiente configurado para uso via terminal.
 Para execução do CONCRETE e seus passos, visite o projeto.
 
 Caso deseje executar o passo a passo alterado para uso em Windows, utilize os scripts dentro da pasta "scripts".
+Caso deseje executar o passo a passo em Linux, utilize os comandos disponibilizados pelo projeto original.
+
+-> Dentro do seguinte [Google Drive]https://drive.google.com/drive/u/0/folders/1lSHBh7rrmZQyXPae82o7HS5WFC5_CEjp
