@@ -7,7 +7,7 @@ from utils import translate_back_to_original, translate_claim
 
 def synonym_replacement(data):
     modified_data = data.copy()
-    translated_claim = translate_claim(modified_data["claim"])
+    translated_claim = translate_claim(modified_data["question"])
     words = nltk.word_tokenize(translated_claim)
     new_claim = []
     for word in words:
@@ -18,13 +18,13 @@ def synonym_replacement(data):
             new_claim.append(new_word)
         else:
             new_claim.append(word)
-    modified_data["claim"] = translate_back_to_original(' '.join(new_claim), 'auto')
+    modified_data["question"] = translate_back_to_original(' '.join(new_claim), 'auto')
 
     return modified_data
 
 def negate_claim(data):
     modified_data = data.copy()
-    translated_claim = translate_claim(modified_data["claim"])
+    translated_claim = translate_claim(modified_data["question"])
     words = nltk.word_tokenize(translated_claim)
     negated_claim = []
     for word in words:
@@ -32,24 +32,24 @@ def negate_claim(data):
             negated_claim.append("não " + word)
         else:
             negated_claim.append(word)
-    modified_data["claim"] = translate_back_to_original(' '.join(negated_claim), 'auto')
+    modified_data["question"] = translate_back_to_original(' '.join(negated_claim), 'auto')
 
     return modified_data
 
 
 def remove_non_critical_words(data):
     modified_data = data.copy()
-    translated_claim = translate_claim(modified_data["claim"])
+    translated_claim = translate_claim(modified_data["question"])
     words = nltk.word_tokenize(translated_claim)
     non_critical = ["do", "de", "a", "e"]
     new_claim = [word for word in words if word.lower() not in non_critical]
-    modified_data["claim"] = translate_back_to_original(' '.join(new_claim), 'auto')
+    modified_data["question"] = translate_back_to_original(' '.join(new_claim), 'auto')
 
     return modified_data
 
 def change_to_question(data):
     modified_data = data.copy()
-    modified_data["claim"] = translate_back_to_original(translate_claim(modified_data["claim"]) + " é verdade?", 'auto')
+    modified_data["question"] = translate_back_to_original(translate_claim(modified_data["question"]) + " é verdade?", 'auto')
     
     return modified_data
 

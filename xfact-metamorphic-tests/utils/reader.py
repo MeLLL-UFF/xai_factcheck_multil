@@ -10,8 +10,7 @@ def get_tsv_data(tsv_file_path, output_json_path):
             num_total_news = len(data_json)
     else:
         df = pd.read_csv(tsv_file_path, sep='\t')
-        df['evidences'] = df[['evidence_1', 'evidence_2', 'evidence_3', 'evidence_4', 'evidence_5']].values.tolist()
-        df = df.drop(columns=['evidence_1', 'evidence_2', 'evidence_3', 'evidence_4', 'evidence_5'])
+        df['ctxs'] = df.drop(columns=['id', 'doc_id'])
         data_json = df.to_dict(orient='records')
         num_total_news = len(data_json)
 

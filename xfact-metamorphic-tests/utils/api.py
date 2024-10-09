@@ -10,7 +10,6 @@ def gpt_request(prompt):
         prompt=prompt,
         max_tokens=200
     )
-    
     return response['choices'][0]['text'].strip()
 
 def maritaca_request(prompt):

@@ -1,1 +1,1 @@
-from validate_claim_tests import validate_claim_tests
+from validate_claim_tests import validate_claim_tests, synonym_replacement,negate_claim,remove_non_critical_words,change_to_question

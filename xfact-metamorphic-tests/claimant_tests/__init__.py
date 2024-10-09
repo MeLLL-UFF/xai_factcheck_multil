@@ -1,1 +1,1 @@
-from validate_claimant_tests import validate_claimant_tests
+from validate_claimant_tests import validate_claimant_tests, set_false_claimant, set_true_claimant

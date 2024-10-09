@@ -1,29 +1,31 @@
-def change_claim_date(data, new_date):
+from utils import replace_dates, remove_dates
+
+def change_any_date(data):
     modified_data = data.copy()
-    modified_data['claimDate'] = new_date
+    modified_data['ctxs'][0] = replace_dates(modified_data['ctx'][0])
     return modified_data
 
-def remove_claim_date(data):
+def remove_any_date(data):
     modified_data = data.copy()
-    modified_data['claimDate'] = ""
+    modified_data['ctxs'][0] = remove_dates(modified_data['ctx'][0])
     return modified_data
 
-def change_review_date(data, new_date):
+def change_all_date(data):
     modified_data = data.copy()
-    modified_data['reviewDate'] = new_date
+    modified_data['ctxs'] = [replace_dates(item) for item in modified_data['ctx']]
     return modified_data
 
-def remove_review_date(data):
+def remove_all_date(data):
     modified_data = data.copy()
-    modified_data['reviewDate'] = ""
+    modified_data['ctxs'] = [remove_dates(item) for item in modified_data['ctx']]
     return modified_data
 
 def validate_date_tests(data):
     prompt =f"""
-        "Remove review date": {remove_review_date(data)},
-        "Change review date": {change_review_date(data)},
-        "Remove claim date": {remove_claim_date(data)},
-        "Change claim date": {change_claim_date(data)},
-        In these tests, there are no need to repeat tests that contradict eachother.
+        "Remove any date": {remove_any_date(data)},
+        "Remove all dates": {remove_all_date(data)},
+        "Change any date": {change_any_date(data)},
+        "Change all dates": {change_all_date(data)},
+
     """
     return prompt
