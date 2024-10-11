@@ -12,17 +12,15 @@ def create_result_file(result_path, results_data):
     with open(result_path, 'w') as json_file:
         json.dump(results_data, json_file, indent=4)
 
-def process_json(data):
-    processed_data = data.copy()
-    
-    # Itera sobre cada item no array 'ctxs'
-    for ctx in processed_data.get('ctxs', []):
-        if 'doc_id' in ctx:
-            del ctx['doc_id']
-        if 'id' in ctx:
-            del ctx['id']
-    
-    return processed_data
+def process_json(data_path):
+     with open(data_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+        for ctx in data.get('ctxs', []):
+            if 'doc_id' in ctx:
+                del ctx['doc_id']
+            if 'id' in ctx:
+                del ctx['id']
+        return data
 
 def create_grouped_prompt(data):
     prompt = f"""
