@@ -14,14 +14,19 @@ num_samples = min(200, len(data))
 random_data_samples = random.sample(data, num_samples)
 all_results = {}
 
+#Estruturar tabela de acordo com o artigo e validar o que é necessario para uma informação ser classificada como verdadeira ou falsa
+
+
 for i, sample in enumerate(random_data_samples):
     results = {
     "Current data to test":sample,
     "Open AI without test": gpt_request(create_grouped_prompt(sample)),
+    "----------------------------------------------------------"
     "Open AI metamorphic tests with date: remove all dates": gpt_request(create_grouped_prompt(remove_all_date(sample))),
     "Open AI metamorphic tests with date: remove random date": gpt_request(create_grouped_prompt(remove_any_date(sample))),
     "Open AI metamorphic tests with date: change all date": gpt_request(create_grouped_prompt(change_all_date(sample))),
     "Open AI metamorphic tests with date: change random dates": gpt_request(create_grouped_prompt(change_any_date(sample))),
+    "----------------------------------------------------------"
     "Open AI metamorphic tests with claim: Synonym Replacement": gpt_request(create_grouped_prompt(synonym_replacement(sample))),
     "Open AI metamorphic tests with claim: Negated Claim": gpt_request(create_grouped_prompt(negate_claim(sample))),
     "Open AI metamorphic tests with claim: Removed Non-Critical Words": gpt_request(create_grouped_prompt(remove_non_critical_words(sample))),

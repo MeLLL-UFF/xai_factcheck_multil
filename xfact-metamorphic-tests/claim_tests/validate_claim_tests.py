@@ -3,23 +3,36 @@ import nltk
 from nltk.corpus import wordnet
 nltk.download('wordnet')
 nltk.download('punkt')
+from keybert import KeyBERT
 from utils import translate_back_to_original, translate_claim
 
 def synonym_replacement(data):
+    kw_model = KeyBERT()
     modified_data = data.copy()
     translated_claim = translate_claim(modified_data["question"])
     words = nltk.word_tokenize(translated_claim)
+    
+    keywords = kw_model.extract_keywords(translated_claim, 
+                                       keyphrase_ngram_range=(1, 1), 
+                                       stop_words='portuguese',
+                                       top_n=3)
+    
+    keyword_list = [keyword[0] for keyword in keywords]
+    
     new_claim = []
     for word in words:
-        synsets = wordnet.synsets(word, lang='por')
-        if synsets:
-            synonyms = synsets[0].lemmas()
-            new_word = random.choice(synonyms).name() if synonyms else word
-            new_claim.append(new_word)
+        if word.lower() in [k.lower() for k in keyword_list]:
+            synsets = wordnet.synsets(word, lang='por')
+            if synsets:
+                synonyms = synsets[0].lemmas()
+                new_word = random.choice(synonyms).name() if synonyms else word
+                new_claim.append(new_word)
+            else:
+                new_claim.append(word)
         else:
             new_claim.append(word)
+    
     modified_data["question"] = translate_back_to_original(' '.join(new_claim), 'auto')
-
     return modified_data
 
 def negate_claim(data):

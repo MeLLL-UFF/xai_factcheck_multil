@@ -26,6 +26,5 @@ def validate_date_tests(data):
         "Remove all dates": {remove_all_date(data)},
         "Change any date": {change_any_date(data)},
         "Change all dates": {change_all_date(data)},
-
     """
     return prompt

@@ -10,14 +10,13 @@ def gpt_request(prompt):
     openai.api_key = os.getenv("OPEN_API_KEY")
     response = openai.Completion.create(
         model="gpt-4o-mini",
-        prompt=prompt,
-        max_tokens=200
+        prompt=prompt
     )
     return response['choices'][0]['text'].strip()
 
 def maritaca_request(prompt):
     model = maritalk.MariTalk(key=os.getenv("MARITACA_API_KEY"), model="sabia-2-small")
-    response = model.generate(prompt, max_tokens=200)
+    response = model.generate(prompt)
     answer = response["answer"]
     return answer
 
