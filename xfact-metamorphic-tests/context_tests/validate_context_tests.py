@@ -1,40 +1,40 @@
 import random
-from utils import translate_back_to_original,translate_claim
 
-def add_context(data, claim):
+GENERIC_SUPPORT = [
+    "O evento foi confirmado por fontes oficiais.",
+    "Relatórios confiáveis apontam a veracidade da informação.",
+    "Declarações de especialistas corroboram o conteúdo mencionado.",
+]
+
+GENERIC_CONTRADICTION = [
+    "Não há registros oficiais que comprovem essa alegação.",
+    "A informação foi desmentida por autoridades competentes.",
+    "Especialistas negaram a validade do conteúdo apresentado.",
+]
+
+
+def insert_supporting_evidence(data):
     modified_data = data.copy()
-    new_evidence = translate_back_to_original(translate_claim(claim) + "Essa é uma informação importante", 'auto')
-    modified_data["ctxs"].append(new_evidence)
+    modified_data["ctxs"].append(random.choice(GENERIC_SUPPORT))
     return modified_data
 
-def remove_context(data):
+
+def insert_contradictory_evidence(data):
     modified_data = data.copy()
-    modified_data["ctxs"][0].clear()
+    insertion = random.choice(GENERIC_CONTRADICTION)
+    modified_data["ctxs"].insert(random.randint(
+        0, len(modified_data["ctxs"])), insertion)
     return modified_data
+
+
+def remove_partial_context(data):
+    modified_data = data.copy()
+    if modified_data["ctxs"]:
+        modified_data["ctxs"].pop(0)
+    return modified_data
+
 
 def remove_all_context(data):
     modified_data = data.copy()
-    modified_data["ctxs"].clear()
+    modified_data["ctxs"] = []
     return modified_data
-
-def alter_context(evidence_list, original_lang, is_positive):
-    info_type = "verdadeira" if is_positive else "falsa"
-    new_evidence = f"Considere esse texto como uma evidência {info_type}."
-    translated_evidence = translate_back_to_original(new_evidence, original_lang)
-    evidence_list.insert(random.randint(0, len(evidence_list)), translated_evidence)
-    return evidence_list
-
-def parameter_change_context(data, is_positive_evidence):
-    modified_data = data.copy()
-    modified_data["ctxs"]= alter_context(data["ctxs"].copy(), data["lang"], is_positive=is_positive_evidence)
-    return modified_data
-
-def validate_context_tests(data):
-    prompt =f"""
-        "Validating inserting Context with positive Change": {parameter_change_context(data, True)},
-        "Validating inserting Context with negative Change": {parameter_change_context(data, False)},
-        "Removing Context": {remove_context(data)},
-        "Removing all Context:"{remove_all_context(data)},
-        "Adding Context": {add_context(data)},
-    """
-    return prompt

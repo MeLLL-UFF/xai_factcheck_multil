@@ -1,75 +1,72 @@
-import random
+import argparse
+import json
+import pandas as pd
+from tqdm import tqdm
 
-from claim_tests import change_to_question, remove_non_critical_words, negate_claim,synonym_replacement
-from context_tests import remove_all_context, remove_context, add_context, parameter_change_context
-from claimant_tests import set_false_claimant, set_true_claimant
-from date_tests import remove_all_date, remove_any_date, change_all_date, change_any_date
-from utils import gpt_request,process_json, maritaca_request, gemini_request, create_result_file, create_grouped_prompt
-
-result_path = f"G:\GitHub\apps\mestrado\xai_factcheck_multil\xfact-metamorphic-tests\data\results.json"
-json_file_path = f"G:\GitHub\apps\mestrado\xai_factcheck_multil\CONCRETE\CORA\mDPR\retrieved_docs\zeroshot.xict.json"
-data = process_json(json_file_path)
-
-num_samples = min(200, len(data))
-random_data_samples = random.sample(data, num_samples)
-all_results = {}
-
-#Estruturar tabela de acordo com o artigo e validar o que é necessario para uma informação ser classificada como verdadeira ou falsa
+from utils import create_grouped_prompt, load_input_tsv, query_model, ALL_MRs, apply_mr
 
 
-for i, sample in enumerate(random_data_samples):
-    results = {
-    "Current data to test":sample,
-    "Open AI without test": gpt_request(create_grouped_prompt(sample)),
-    "----------------------------------------------------------"
-    "Open AI metamorphic tests with date: remove all dates": gpt_request(create_grouped_prompt(remove_all_date(sample))),
-    "Open AI metamorphic tests with date: remove random date": gpt_request(create_grouped_prompt(remove_any_date(sample))),
-    "Open AI metamorphic tests with date: change all date": gpt_request(create_grouped_prompt(change_all_date(sample))),
-    "Open AI metamorphic tests with date: change random dates": gpt_request(create_grouped_prompt(change_any_date(sample))),
-    "----------------------------------------------------------"
-    "Open AI metamorphic tests with claim: Synonym Replacement": gpt_request(create_grouped_prompt(synonym_replacement(sample))),
-    "Open AI metamorphic tests with claim: Negated Claim": gpt_request(create_grouped_prompt(negate_claim(sample))),
-    "Open AI metamorphic tests with claim: Removed Non-Critical Words": gpt_request(create_grouped_prompt(remove_non_critical_words(sample))),
-    "Open AI metamorphic tests with claim: Changed to Question": gpt_request(create_grouped_prompt(change_to_question(sample))),
-    "Open AI metamorphic tests with claimant: Adding claimant as a False claimant": gpt_request(create_grouped_prompt(set_false_claimant(sample))),
-    "Open AI metamorphic tests with claimant: Adding claimant as a True claimant": gpt_request(create_grouped_prompt(set_true_claimant(sample))),
-    "Open AI metamorphic tests with context: Validating inserting Context with positive Change": gpt_request(create_grouped_prompt(parameter_change_context(sample, True))),
-    "Open AI metamorphic tests with context: Validating inserting Context with negative Change": gpt_request(create_grouped_prompt(parameter_change_context(sample, False))),
-    "Open AI metamorphic tests with context: Removing random Context": gpt_request(create_grouped_prompt(remove_context(sample))),
-    "Open AI metamorphic tests with context: Removing All Context": gpt_request(create_grouped_prompt(remove_all_context(sample))),
-    "Open AI metamorphic tests with context: Adding Context": gpt_request(create_grouped_prompt(add_context(sample))),
-    "Maritaca AI without test": maritaca_request(create_grouped_prompt(sample)),
-    "Maritaca AI metamorphic tests with date: remove all dates": maritaca_request(create_grouped_prompt(remove_all_date(sample))),
-    "Maritaca AI metamorphic tests with date: remove random date": maritaca_request(create_grouped_prompt(remove_any_date(sample))),
-    "Maritaca AI metamorphic tests with date: change all date": maritaca_request(create_grouped_prompt(change_all_date(sample))),
-    "Maritaca AI metamorphic tests with date: change random dates": maritaca_request(create_grouped_prompt(change_any_date(sample))),
-    "Maritaca AI metamorphic tests with claim: Synonym Replacement": maritaca_request(create_grouped_prompt(synonym_replacement(sample))),
-    "Maritaca AI metamorphic tests with claim: Negated Claim": maritaca_request(create_grouped_prompt(negate_claim(sample))),
-    "Maritaca AI metamorphic tests with claim: Removed Non-Critical Words": maritaca_request(create_grouped_prompt(remove_non_critical_words(sample))),
-    "Maritaca AI metamorphic tests with claim: Changed to Question": maritaca_request(create_grouped_prompt(change_to_question(sample))),
-    "Maritaca AI metamorphic tests with claimant: Adding claimant as a False claimant": maritaca_request(create_grouped_prompt(set_false_claimant(sample))),
-    "Maritaca AI metamorphic tests with claimant: Adding claimant as a True claimant": maritaca_request(create_grouped_prompt(set_true_claimant(sample))),
-    "Maritaca AI metamorphic tests with context: Validating inserting Context with positive Change": maritaca_request(create_grouped_prompt(parameter_change_context(sample, True))),
-    "Maritaca AI metamorphic tests with context: Validating inserting Context with negative Change": maritaca_request(create_grouped_prompt(parameter_change_context(sample, False))),
-    "Maritaca AI metamorphic tests with context: Removing random Context": maritaca_request(create_grouped_prompt(remove_context(sample))),
-    "Maritaca AI metamorphic tests with context: Removing All Context": maritaca_request(create_grouped_prompt(remove_all_context(sample))),
-    "Maritaca AI metamorphic tests with context: Adding Context": maritaca_request(create_grouped_prompt(add_context(sample))),
-    "Gemini AI without test": gemini_request(create_grouped_prompt(sample)),
-    "Gemini AI metamorphic tests with date: remove all dates": gemini_request(create_grouped_prompt(remove_all_date(sample))),
-    "Gemini AI metamorphic tests with date: remove random date": gemini_request(create_grouped_prompt(remove_any_date(sample))),
-    "Gemini AI metamorphic tests with date: change all date": gemini_request(create_grouped_prompt(change_all_date(sample))),
-    "Gemini AI metamorphic tests with date: change random dates": gemini_request(create_grouped_prompt(change_any_date(sample))),
-    "Gemini AI metamorphic tests with claim: Synonym Replacement": gemini_request(create_grouped_prompt(synonym_replacement(sample))),
-    "Gemini AI metamorphic tests with claim: Negated Claim": gemini_request(create_grouped_prompt(negate_claim(sample))),
-    "Gemini AI metamorphic tests with claim: Removed Non-Critical Words": gemini_request(create_grouped_prompt(remove_non_critical_words(sample))),
-    "Gemini AI metamorphic tests with claim: Changed to Question": gemini_request(create_grouped_prompt(change_to_question(sample))),
-    "Gemini AI metamorphic tests with claimant: Adding claimant as a False claimant": gemini_request(create_grouped_prompt(set_false_claimant(sample))),
-    "Gemini AI metamorphic tests with claimant: Adding claimant as a True claimant": gemini_request(create_grouped_prompt(set_true_claimant(sample))),
-    "Gemini AI metamorphic tests with context: Validating inserting Context with positive Change": gemini_request(create_grouped_prompt(parameter_change_context(sample, True))),
-    "Gemini AI metamorphic tests with context: Validating inserting Context with negative Change": gemini_request(create_grouped_prompt(parameter_change_context(sample, False))),
-    "Gemini AI metamorphic tests with context: Removing random Context": gemini_request(create_grouped_prompt(remove_context(sample))),
-    "Gemini AI metamorphic tests with context: Removing All Context": gemini_request(create_grouped_prompt(remove_all_context(sample))),
-    "Gemini AI metamorphic tests with context: Adding Context": gemini_request(create_grouped_prompt(add_context(sample))),
-    }
-    all_results[f"Sample {i+1}"] = results
-    create_result_file(result_path,all_results)
+def generate_mutated_table(input_tsv: str, output_tsv: str):
+    """
+    Aplica todas as metamorphic relations em cada linha e gera um TSV expandido com os resultados.
+    """
+    df_original = pd.read_csv(input_tsv, sep="\t")
+    all_mutated_rows = []
+
+    for index, row in tqdm(df_original.iterrows(), total=len(df_original), desc="Gerando mutações"):
+        for mr in ALL_MRs:
+            mutated_row = row.copy()
+            mutated_fields = apply_mr(mutated_row.to_dict(), mr)
+            mutated_fields["original_index"] = index
+            mutated_fields["applied_mr"] = mr
+            all_mutated_rows.append(mutated_fields)
+
+    df_mutated = pd.DataFrame(all_mutated_rows)
+    df_mutated.to_csv(output_tsv, sep="\t", index=False)
+    print(f"Tabela de mutações salva em: {output_tsv}")
+
+
+def run_fact_checking(input_path, output_path, model, cache_dir=None):
+    data = load_input_tsv(input_path)
+
+    responses = []
+    for idx, instance in tqdm(data.iterrows(), total=len(data), desc="Executando queries"):
+        prompt = create_grouped_prompt(instance)
+        response = query_model(
+            model, prompt, cache_dir=cache_dir, metadata=instance)
+
+        result = {
+            "original_index": instance.get("original_index", idx),
+            "applied_mr": instance.get("applied_mr", "original"),
+            "prompt": prompt,
+            "model_response": json.dumps(response, ensure_ascii=False)
+        }
+
+        responses.append(result)
+
+    df_out = pd.DataFrame(responses)
+    df_out.to_csv(output_path, sep="\t", index=False)
+    print(f"Resultados salvos em: {output_path}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", type=str, required=True,
+                        help="Arquivo TSV original (ex: x_fact.tsv)")
+    parser.add_argument("--output", type=str, default="results.tsv",
+                        help="Arquivo de saída com os resultados")
+    parser.add_argument("--model", type=str, required=True,
+                        help="Nome do modelo (ex: gpt-4, maritaca, gemini)")
+    parser.add_argument("--cache", type=str, default=None,
+                        help="Diretório para cache das respostas")
+    parser.add_argument("--generate_mutations", action="store_true",
+                        help="Se definido, gera mutações e salva em TSV")
+    parser.add_argument("--mutated_output", type=str,
+                        default="all_mutations.tsv", help="Arquivo de saída das mutações")
+    args = parser.parse_args()
+
+    if args.generate_mutations:
+        generate_mutated_table(args.input, args.mutated_output)
+    else:
+        run_fact_checking(args.input, args.output,
+                          args.model, cache_dir=args.cache)

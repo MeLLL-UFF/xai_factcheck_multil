@@ -20,3 +20,6 @@ def get_tsv_data(tsv_file_path, output_json_path):
         selected_news = data_json
 
     return selected_news
+
+def load_input_tsv(path):
+    return pd.read_csv(path, sep="\t")
