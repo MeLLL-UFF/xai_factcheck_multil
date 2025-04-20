@@ -15,15 +15,13 @@ GENERIC_CONTRADICTION = [
 
 def insert_supporting_evidence(data):
     modified_data = data.copy()
-    modified_data["ctxs"].append(random.choice(GENERIC_SUPPORT))
+    modified_data["ctxs"].append(GENERIC_SUPPORT[0])
     return modified_data
 
 
 def insert_contradictory_evidence(data):
     modified_data = data.copy()
-    insertion = random.choice(GENERIC_CONTRADICTION)
-    modified_data["ctxs"].insert(random.randint(
-        0, len(modified_data["ctxs"])), insertion)
+    modified_data["ctxs"].insert(GENERIC_CONTRADICTION[0])
     return modified_data
 
 
