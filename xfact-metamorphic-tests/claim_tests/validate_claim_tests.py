@@ -5,22 +5,20 @@ from nltk.tokenize import word_tokenize
 from keybert import KeyBERT
 from textblob import TextBlob
 from transformers import pipeline
-# suas funções externas
+
 from utils import translate_claim, translate_back_to_original, detect_language
 
-# Baixar recursos do NLTK
 nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
 
 
-# Carregar pipelines de transformers
 question_generator = pipeline(
-    "text2text-generation", model="valhalla/t5-base-e2e-qg", device=0)
+    "text2text-generation", model="lmsys/fastchat-t5-3b-v1.0", device=0)
 negation_generator = pipeline(
-    "text2text-generation", model="t5-small", device=0)
+    "text2text-generation", model="google/flan-t5-large", device=0)
 sentiment_generator = pipeline(
-    "text2text-generation", model="t5-base", device=0)
+    "text2text-generation", model="declare-lab/flan-alpaca-base", device=0)
 
 LANG = 'portuguese'
 STOPWORDS = stopwords.words(LANG)
@@ -91,22 +89,23 @@ def negate_claim(data):
         original_text) if lang != 'pt' else original_text
 
     try:
-        prompt = f"Negate: {translated}"
+        prompt = f"Negate the sentence: {translated}"
         result = negation_generator(prompt, max_length=64, do_sample=False)[
             0]['generated_text']
+        modified_data["question"] = translate_back_to_original(result, lang)
+
     except Exception as e:
         print(f"[Fallback] negate_claim(): {e}")
-        result = fallback_negate(translated)
-
-    modified_data["question"] = translate_back_to_original(result, lang)
+        result = fallback_negate(original_text)
+        modified_data["question"] = result
     return modified_data
 
 
 def fallback_question(text, lang):
     if lang == 'pt':
-        return f"{text} Isso é verdade?"
+        return f"{text}?"
     elif lang == 'en':
-        return f"{text} Is that true?"
+        return f"{text}. Is that true?"
     else:
         return f"{text} ?"
 
@@ -119,14 +118,15 @@ def change_to_question(data):
         original_text) if lang != 'pt' else original_text
 
     try:
-        prompt = f"generate question: {translated}"
+        prompt = f"Turn the following statement into a yes/no question: {translated}"
         result = question_generator(prompt, max_length=64, do_sample=False)[
             0]['generated_text']
+        modified_data["question"] = translate_back_to_original(result, lang)
+
     except Exception as e:
         print(f"[Fallback] change_to_question(): {e}")
-        result = fallback_question(translated, lang)
-
-    modified_data["question"] = translate_back_to_original(result, lang)
+        result = fallback_question(original_text, lang)
+        modified_data["question"] = result
     return modified_data
 
 
@@ -145,7 +145,7 @@ def sentiment_shift(data):
         original_text) if lang != 'en' else original_text
 
     try:
-        prompt = f"Amplify the emotional tone of the sentence: {translated}"
+        prompt = f"Rewrite the sentence with stronger emotional tone: {translated}"
         result = sentiment_generator(prompt, max_length=64, do_sample=False)[
             0]['generated_text']
     except Exception as e:
