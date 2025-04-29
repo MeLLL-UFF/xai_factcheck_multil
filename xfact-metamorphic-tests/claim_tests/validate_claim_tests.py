@@ -34,13 +34,10 @@ def synonym_replacement(data):
     kw_model = KeyBERT()
     modified_data = data.copy()
     original_text = modified_data["question"]
-    source_lang = detect_language(original_text)
-    translated = translate_claim(original_text)
-
     keywords = kw_model.extract_keywords(
-        translated, keyphrase_ngram_range=(1, 1), stop_words=LANG, top_n=3)
+        original_text, keyphrase_ngram_range=(1, 1), stop_words=LANG, top_n=3)
     keyword_list = [kw[0].lower() for kw in keywords]
-    words = word_tokenize(translated)
+    words = word_tokenize(original_text)
 
     new_claim = []
     for word in words:
@@ -55,22 +52,17 @@ def synonym_replacement(data):
         else:
             new_claim.append(word)
 
-    modified_data["question"] = translate_back_to_original(
-        " ".join(new_claim), source_lang)
+    modified_data["question"] = " ".join(new_claim)
     return modified_data
 
 
 def remove_non_critical_words(data):
     modified_data = data.copy()
     original_text = modified_data["question"]
-    lang = detect_language(original_text)
-    translated = translate_claim(
-        original_text) if lang != 'pt' else original_text
 
-    words = word_tokenize(translated)
+    words = word_tokenize(original_text)
     filtered = [w for w in words if w.lower() not in STOPWORDS]
-    modified_data["question"] = translate_back_to_original(
-        " ".join(filtered), lang)
+    modified_data["question"] = " ".join(filtered)
     return modified_data
 
 
@@ -147,15 +139,15 @@ def fallback_sentiment(text):
 def sentiment_shift(data):
     modified_data = data.copy()
     original_text = modified_data["question"]
-    
+
     try:
         prompt = f"Reescreva a frase com um tom emocional oposto: {original_text}"
-        result = sentiment_generator(prompt, max_length=100, do_sample=True, temperature=0.7)[0]['generated_text']
-    
+        result = sentiment_generator(
+            prompt, max_length=100, do_sample=True, temperature=0.7)[0]['generated_text']
+
     except Exception as e:
         print(f"[Fallback] sentiment_shift(): {e}")
         result = fallback_sentiment(original_text)
 
     modified_data["question"] = result
     return modified_data
-
