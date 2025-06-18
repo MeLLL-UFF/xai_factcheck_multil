@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import os
 
+
 def remove_label_column(data):
     del data.label
     return data
@@ -26,6 +27,7 @@ def process_json(data_path):
                 del ctx['id']
         return data
 
+
 def create_grouped_prompt(data):
     prompt = f"""
 You are an AI model specialized in verifying news
@@ -40,8 +42,8 @@ Rules:
 **Claim:** "{data['claim']}"  
 **Claimant:** "{data['claimant']}"  
 **Source Website:** "{data['site']}"  
-**Claim Date:** "{data['claim_date']}"  
-**Review Date:** "{data['review_date']}"
+**Claim Date:** "{data['claimDate']}"  
+**Review Date:** "{data['reviewDate']}"
 
 **Available Evidence:**  
 - {data['evidence']}  
@@ -71,7 +73,7 @@ returns a JSON with the following data:
   misleading/complicated/hard to categorize/other/
   mostly false/false",
   "supporting_evidence": [
-      "evidence": "evidence_1",
+      "evidence": "evidence",
       "summary": "How this evidence supports or
       contradicts the claim"
   ],
@@ -80,7 +82,48 @@ returns a JSON with the following data:
     return prompt
 
 
-def random_date(start_year=1900, end_year=2024):
+def save_prompts_by_news(dataframe, base_folder='xfact-metamorphic-tests\\data'):
+    for original_index, group in dataframe.groupby('original_index'):
+        news_folder = os.path.join(base_folder, str(original_index), 'prompts')
+        os.makedirs(news_folder, exist_ok=True)
+        group = group.reset_index(drop=True)
+
+        for i, row in group.iterrows():
+            data = row.to_dict()
+
+            ctxs = []
+            for j in range(1, 6):
+                ev = data.get(f'evidence_{j}', '')
+                if pd.notna(ev) and ev.strip():
+                    ctxs.append(ev.strip())
+            data['ctxs'] = ctxs
+
+            evidence_text = "\n- ".join(ctxs)
+            if evidence_text:
+                evidence_text = "- " + evidence_text
+            data['evidence'] = evidence_text
+
+            sources = []
+            for j in range(1, 6):
+                link = data.get(f'link_{j}', '')
+                if pd.notna(link) and link.strip():
+                    sources.append(link.strip())
+
+            source_text = "\n- ".join(sources)
+            if source_text:
+                source_text = "- " + source_text
+            data['source'] = source_text
+
+            prompt = create_grouped_prompt(data)
+            prompt_filename = os.path.join(news_folder, f"{i}.txt")
+
+            with open(prompt_filename, 'w', encoding='utf-8') as f:
+                f.write(prompt)
+
+        print(f"Prompts salvos para notícia {original_index} em {news_folder}")
+
+
+def random_date(start_year=1900, end_year=2025):
     start_date = datetime(start_year, 1, 1)
     end_date = datetime(end_year, 12, 31)
 
@@ -122,3 +165,31 @@ def remove_dates(text):
         text = re.sub(pattern, "", text)
 
     return text
+
+
+def row_to_ctxs(row):
+    if isinstance(row, dict):
+        data = row
+    else:
+        data = row.to_dict()
+    ctxs = []
+    for i in range(1, 6):
+        col = f"evidence_{i}"
+        if pd.notnull(data.get(col, None)) and str(data[col]).strip() != "":
+            ctxs.append(str(data[col]))
+    data["ctxs"] = ctxs
+    return data
+
+
+def ctxs_to_row(data):
+    result = data.copy()
+    ctxs = result.get("ctxs", [])
+    for i in range(1, 6):
+        col = f"evidence_{i}"
+        if i-1 < len(ctxs):
+            result[col] = ctxs[i-1]
+        else:
+            result[col] = ""
+    if "ctxs" in result:
+        del result["ctxs"]
+    return result

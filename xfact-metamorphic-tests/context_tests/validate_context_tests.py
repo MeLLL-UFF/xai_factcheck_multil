@@ -1,4 +1,4 @@
-import random
+from ..utils import row_to_ctxs, ctxs_to_row, translate_claim, detect_language
 
 GENERIC_SUPPORT = [
     "O evento foi confirmado por fontes oficiais.",
@@ -13,26 +13,42 @@ GENERIC_CONTRADICTION = [
 ]
 
 
-def insert_supporting_evidence(data):
-    modified_data = data.copy()
-    modified_data["ctxs"].append(GENERIC_SUPPORT[0])
-    return modified_data
+def get_ctx_language(ctxs):
+    """Detecta o idioma da primeira evidência não vazia."""
+    for ctx in ctxs:
+        if ctx and str(ctx).strip():
+            return detect_language(ctx)
+    return 'pt'
 
 
-def insert_contradictory_evidence(data):
-    modified_data = data.copy()
-    modified_data["ctxs"].insert(GENERIC_CONTRADICTION[0])
-    return modified_data
+def insert_supporting_evidence(row):
+    data = row_to_ctxs(row)
+    lang = get_ctx_language(data["ctxs"])
+    phrase = GENERIC_SUPPORT[0]
+    if lang != 'pt':
+        phrase = translate_claim(phrase, dest_lang=lang)
+    data["ctxs"].append(phrase)
+    return ctxs_to_row(data)
 
 
-def remove_partial_context(data):
-    modified_data = data.copy()
-    if modified_data["ctxs"]:
-        modified_data["ctxs"].pop(0)
-    return modified_data
+def insert_contradictory_evidence(row):
+    data = row_to_ctxs(row)
+    lang = get_ctx_language(data["ctxs"])
+    phrase = GENERIC_CONTRADICTION[0]
+    if lang != 'pt':
+        phrase = translate_claim(phrase, dest_lang=lang)
+    data["ctxs"].append(phrase)
+    return ctxs_to_row(data)
 
 
-def remove_all_context(data):
-    modified_data = data.copy()
-    modified_data["ctxs"] = []
-    return modified_data
+def remove_partial_context(row):
+    data = row_to_ctxs(row)
+    if data["ctxs"]:
+        data["ctxs"].pop(0)
+    return ctxs_to_row(data)
+
+
+def remove_all_context(row):
+    data = row_to_ctxs(row)
+    data["ctxs"] = []
+    return ctxs_to_row(data)

@@ -1,4 +1,4 @@
-from utils import translate_back_to_original, translate_claim
+from ..utils import translate_claim, detect_language
 import requests
 from bs4 import BeautifulSoup
 import random
@@ -23,30 +23,36 @@ def get_ifcn_brazil_sources():
         return None
 
 
-def set_true_claimant(data):
-    modified_data = data.copy()
+def set_true_claimant(row):
+    row_out = row.copy()
+
+    original_lang = detect_language(
+        str(row.get("claimant") or row.get("claim") or ""))
     sources = get_ifcn_brazil_sources()
-
     if sources:
-        chosen_source = random.choice(sources)
-        modified_data["claimant"] = f"Informação verificada por {chosen_source}"
+        base = f"Informação verificada por {random.choice(sources)}"
     else:
-        modified_data["claimant"] = "Informação proveniente de uma fonte considerada confiável segundo padrões jornalísticos"
-
-    return modified_data
-
-
-def set_false_claimant(data):
-    modified_data = data.copy()
-    modified_claimant = "informação gerada por um blog desconhecido."
-    modified_data["claimant"] = translate_back_to_original(
-        modified_claimant, 'auto')
-
-    return modified_data
+        base = "Informação proveniente de uma fonte considerada confiável segundo padrões jornalísticos"
+    if original_lang != 'pt':
+        row_out["claimant"] = translate_claim(base, dest_lang=original_lang)
+    else:
+        row_out["claimant"] = base
+    return row_out
 
 
-def remove_claimant(data):
-    modified_data = data.copy()
-    modified_data["claimant"] = "None"
+def set_false_claimant(row):
+    row_out = row.copy()
+    original_lang = detect_language(
+        str(row.get("claimant") or row.get("claim") or ""))
+    base = "informação gerada por um blog desconhecido."
+    if original_lang != 'pt':
+        row_out["claimant"] = translate_claim(base, dest_lang=original_lang)
+    else:
+        row_out["claimant"] = base
+    return row_out
 
-    return modified_data
+
+def remove_claimant(row):
+    row_out = row.copy()
+    row_out["claimant"] = None
+    return row_out

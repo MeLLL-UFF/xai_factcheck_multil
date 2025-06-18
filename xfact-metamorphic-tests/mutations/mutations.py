@@ -1,8 +1,8 @@
 
-from date_tests import change_random_evidence_date, change_one_evidence_date, remove_evidence_dates, remove_one_evidence_date, change_claim_date, change_review_date, remove_claim_date, remove_review_date
-from context_tests import remove_partial_context, remove_all_context, insert_contradictory_evidence, insert_supporting_evidence
-from claim_tests import synonym_replacement, negate_claim, remove_non_critical_words, change_to_question, sentiment_shift
-from claimant_tests import set_false_claimant, set_true_claimant, remove_claimant
+from ..date_tests import change_random_evidence_date, change_one_evidence_date, remove_evidence_dates, remove_one_evidence_date, change_claim_date, change_review_date, remove_claim_date, remove_review_date
+from ..context_tests import remove_partial_context, remove_all_context, insert_contradictory_evidence, insert_supporting_evidence
+from ..claim_tests import synonym_replacement, negate_claim, remove_non_critical_words, change_to_question, sentiment_shift
+from ..claimant_tests import set_false_claimant, set_true_claimant, remove_claimant
 
 ALL_MRs = [
     "synonym_replacement",

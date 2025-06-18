@@ -1,13 +1,13 @@
-from googletrans import Translator
+from deep_translator import GoogleTranslator
 from langdetect import detect
 
-translator = Translator()
 
 def translate_claim(claim, dest_lang='pt'):
-    return translator.translate(claim, dest=dest_lang).text
+    return GoogleTranslator(source='auto', target=dest_lang).translate(claim)
+
 
 def translate_back_to_original(claim, original_lang):
-    return translator.translate(claim, dest=original_lang).text
+    return GoogleTranslator(source='auto', target=original_lang).translate(claim)
 
 def detect_language(text):
     try:
