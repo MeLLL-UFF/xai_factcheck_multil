@@ -25,3 +25,7 @@ if __name__ == "__main__":
     else:
         run_fact_checking(args.input, args.output,
                           args.model, cache_dir=args.cache)
+
+
+##example:
+##>python -m xfact-metamorphic-tests --input xfact-metamorphic-tests/data/exemplo_unificado_top_20.tsv --generate_mutations --mutated_output xfact-metamorphic-tests/data/all_mutations.tsv
