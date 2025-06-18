@@ -1,153 +1,108 @@
-import random
-import nltk
-from nltk.corpus import wordnet, stopwords
+import nlpaug.augmenter.word as naw
+import nlpaug.augmenter.sentence as nas
+from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-from keybert import KeyBERT
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
 
 from utils import translate_claim, translate_back_to_original, detect_language
 
-nltk.download('punkt')
-nltk.download('stopwords')
-nltk.download('wordnet')
-
-tokenizer = AutoTokenizer.from_pretrained(
-    "unicamp-dl/ptt5-base-portuguese-vocab")
-model = AutoModelForSeq2SeqLM.from_pretrained(
-    "unicamp-dl/ptt5-base-portuguese-vocab")
-question_generator = pipeline(
-    "text2text-generation", model="lmsys/fastchat-t5-3b-v1.0", device=0)
-negation_generator = pipeline(
-    "text2text-generation",
-    model=model,
-    tokenizer=tokenizer,
-    device=0
-)
-sentiment_generator = pipeline(
-    "text2text-generation", model="declare-lab/flan-alpaca-base", device=0)
-
-LANG = 'portuguese'
-STOPWORDS = stopwords.words(LANG)
+# Augmenters globais
+synonym_aug_en = naw.SynonymAug(aug_src='wordnet', lang='eng')
+synonym_aug_pt = naw.SynonymAug(aug_src='wordnet', lang='por')
+contextual_aug = naw.ContextualWordEmbsAug(
+    model_path='bert-base-multilingual-cased', action='substitute')
+backtrans_aug = nas.BackTranslationAug(
+    from_model_name='facebook/wmt19-en-de', to_model_name='facebook/wmt19-de-en')
 
 
 def synonym_replacement(data):
-    kw_model = KeyBERT()
     modified_data = data.copy()
-    original_text = modified_data["question"]
-    keywords = kw_model.extract_keywords(
-        original_text, keyphrase_ngram_range=(1, 1), stop_words=LANG, top_n=3)
-    keyword_list = [kw[0].lower() for kw in keywords]
-    words = word_tokenize(original_text)
+    text = modified_data["question"]
+    lang = detect_language(text)
 
-    new_claim = []
-    for word in words:
-        if word.lower() in keyword_list:
-            synsets = wordnet.synsets(word)
-            if synsets:
-                synonyms = synsets[0].lemmas()
-                new_word = random.choice(synonyms).name() if synonyms else word
-                new_claim.append(new_word)
-            else:
-                new_claim.append(word)
-        else:
-            new_claim.append(word)
+    if lang == 'pt':
+        aug = synonym_aug_pt
+        augmented = aug.augment(text)
+    elif lang == 'en':
+        aug = synonym_aug_en
+        augmented = aug.augment(text)
+    else:
+        text_en = translate_claim(text, dest_lang='en')
+        augmented_en = synonym_aug_en.augment(text_en)
+        augmented = translate_back_to_original(augmented_en, lang)
 
-    modified_data["question"] = " ".join(new_claim)
+    modified_data["question"] = augmented
     return modified_data
 
 
 def remove_non_critical_words(data):
     modified_data = data.copy()
-    original_text = modified_data["question"]
+    text = modified_data["question"]
+    lang = detect_language(text)
 
-    words = word_tokenize(original_text)
-    filtered = [w for w in words if w.lower() not in STOPWORDS]
+    try:
+        stopwords_list = stopwords.words(lang)
+    except:
+        stopwords_list = stopwords.words('portuguese')
+
+    words = word_tokenize(text)
+    filtered = [w for w in words if w.lower() not in stopwords_list]
     modified_data["question"] = " ".join(filtered)
     return modified_data
 
 
-def fallback_negate(text):
-    words = word_tokenize(text)
-    negated = []
-    inserted = False
-    for i, word in enumerate(words):
-        if not inserted and word.lower() in ["é", "são", "foi", "foram", "está", "estavam"]:
-            if i == 0 or words[i - 1].lower() != "não":
-                negated.append("não")
-                inserted = True
-        negated.append(word)
-    return " ".join(negated)
-
-
 def negate_claim(data):
     modified_data = data.copy()
-    original_text = modified_data["question"]
-    lang = detect_language(original_text)
-    translated = translate_claim(
-        original_text) if lang != 'pt' else original_text
+    text = modified_data["question"]
+    lang = detect_language(text)
 
-    try:
-        prompt = f"Negue a seguinte frase: {translated}"
-        result = negation_generator(prompt, max_length=64, do_sample=False)[
-            0]['generated_text']
-        modified_data["question"] = translate_back_to_original(result, lang)
+    if lang != 'en':
+        text_en = translate_claim(text, dest_lang='en')
+    else:
+        text_en = text
 
-    except Exception as e:
-        print(f"[Fallback] negate_claim(): {e}")
-        result = fallback_negate(original_text)
-        modified_data["question"] = result
+    augmented_en = contextual_aug.augment(f'not {text_en}')
+    augmented = translate_back_to_original(
+        augmented_en, lang) if lang != 'en' else augmented_en
+
+    modified_data["question"] = augmented
     return modified_data
-
-
-def fallback_question(text):
-    return f"{text} ?"
 
 
 def change_to_question(data):
     modified_data = data.copy()
-    original_text = modified_data["question"]
-    try:
-        prompt = f"Transforme o texto em pergunta: {original_text}"
-        result = question_generator(prompt, max_length=64, do_sample=False)[
-            0]['generated_text']
-        modified_data["question"] = result
+    text = modified_data["question"]
+    lang = detect_language(text)
 
-    except Exception as e:
-        print(f"[Fallback] change_to_question(): {e}")
-        result = fallback_question(original_text)
-        modified_data["question"] = result
-    return modified_data
-
-
-def fallback_sentiment(text):
-    negative_words = ["não", "nunca", "jamais",
-                      "ruim", "péssimo", "horrível", "mal", "triste"]
-    positive_words = ["bom", "ótimo", "excelente",
-                      "feliz", "alegre", "maravilhoso", "bem"]
-
-    words = text.lower().split()
-
-    neg_count = sum(1 for word in words if word in negative_words)
-    pos_count = sum(1 for word in words if word in positive_words)
-
-    if pos_count > neg_count:
-        return "Infelizmente, " + text
+    if lang != 'en':
+        text_en = translate_claim(text, dest_lang='en')
     else:
-        return "Felizmente, " + text
+        text_en = text
+
+    augmented_en = backtrans_aug.augment(text_en)
+    augmented = translate_back_to_original(
+        augmented_en, lang) if lang != 'en' else augmented_en
+
+    # Adiciona "?" se não tiver
+    if not augmented.strip().endswith('?'):
+        augmented = augmented.strip() + " ?"
+
+    modified_data["question"] = augmented
+    return modified_data
 
 
 def sentiment_shift(data):
     modified_data = data.copy()
-    original_text = modified_data["question"]
+    text = modified_data["question"]
+    lang = detect_language(text)
 
-    try:
-        prompt = f"Reescreva a frase com um tom emocional oposto: {original_text}"
-        result = sentiment_generator(
-            prompt, max_length=100, do_sample=True, temperature=0.7)[0]['generated_text']
+    if lang != 'en':
+        text_en = translate_claim(text, dest_lang='en')
+    else:
+        text_en = text
 
-    except Exception as e:
-        print(f"[Fallback] sentiment_shift(): {e}")
-        result = fallback_sentiment(original_text)
+    augmented_en = contextual_aug.augment(text_en)
+    augmented = translate_back_to_original(
+        augmented_en, lang) if lang != 'en' else augmented_en
 
-    modified_data["question"] = result
+    modified_data["question"] = augmented
     return modified_data
