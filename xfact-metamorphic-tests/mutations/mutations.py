@@ -71,3 +71,8 @@ def apply_mr(instance: dict, mr: str) -> dict:
         return remove_one_evidence_date(instance)
     else:
         raise ValueError(f"Unknown metamorphic relation: {mr}")
+
+
+def process_single_mutation(row_dict, mr):
+    mutated_fields = apply_mr(row_dict, mr)
+    return mutated_fields

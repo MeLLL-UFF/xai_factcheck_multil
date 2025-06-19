@@ -193,3 +193,11 @@ def ctxs_to_row(data):
     if "ctxs" in result:
         del result["ctxs"]
     return result
+
+
+def save_partial_results(results, filename):
+    df = pd.DataFrame(results)
+    if os.path.exists(filename):
+        df.to_csv(filename, sep='\t', mode='a', header=False, index=False)
+    else:
+        df.to_csv(filename, sep='\t', index=False)

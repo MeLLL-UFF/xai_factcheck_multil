@@ -1,8 +1,9 @@
-**/data
+**/data_mock
 **/checkpoints
 **/CORA/mDPR/embeddings_multilingual
 **/CORA/mDPR/retrieved_docs
 **/scripts/C
 **/C
+**/data
 **/**/__pycache__
 .env

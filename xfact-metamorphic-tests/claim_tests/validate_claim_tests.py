@@ -37,6 +37,8 @@ def synonym_replacement(data):
     else:
         text_en = translate_claim(text, dest_lang='en')
         augmented_en = synonym_aug_en.augment(text_en)
+        if isinstance(augmented_en, list):
+            augmented_en = augmented_en[0]
         augmented = translate_back_to_original(augmented_en, lang)
 
     modified_data["claim"] = augmented
