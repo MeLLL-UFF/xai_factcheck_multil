@@ -200,4 +200,4 @@ def save_partial_results(results, filename):
     if os.path.exists(filename):
         df.to_csv(filename, sep='\t', mode='a', header=False, index=False)
     else:
-        df.to_csv(filename, sep='\t', index=False)
+        df.to_csv(filename, sep='\t', mode='w', header=True, index=False)

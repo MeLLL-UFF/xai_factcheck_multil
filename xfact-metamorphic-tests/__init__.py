@@ -7,15 +7,30 @@ from .utils import create_grouped_prompt, load_input_tsv, query_model, save_prom
 from .mutations import ALL_MRs, process_single_mutation
 
 
+def load_already_processed(output_tsv):
+    if os.path.exists(output_tsv):
+        df_done = pd.read_csv(output_tsv, sep="\t")
+        processed_keys = set(
+            zip(df_done["original_index"], df_done["applied_mr"]))
+        return processed_keys
+    return set()
+
+
 def generate_mutated_table(input_tsv: str, output_tsv: str):
     """
     Aplica todas as metamorphic relations em cada linha e gera um TSV expandido com os resultados.
     """
     df_original = pd.read_csv(input_tsv, sep="\t")
+
+    processed = load_already_processed(output_tsv)
+
     results = []
     counter = 0
 
-    max_workers = min(12, (os.cpu_count() or 1)+4)
+    max_workers = 16
+    total = len(df_original)
+    batch_size = 100
+    num_batches = (total + batch_size - 1) // batch_size
 
     total_mutations = len(df_original) * (len(ALL_MRs) + 1)
     print(f"Processing {len(df_original)} news")
@@ -23,33 +38,42 @@ def generate_mutated_table(input_tsv: str, output_tsv: str):
     print(f"Using {max_workers} workers")
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = []
+        for batch_num in range(num_batches):
+            start = batch_num * batch_size
+            end = min(start + batch_size, total)
 
-        for index, row in df_original.iterrows():
-            row_dict = row.to_dict()
-            original_fields = row_dict.copy()
-            original_fields["original_index"] = index
-            original_fields["applied_mr"] = "original"
-            results.append(original_fields)
-            counter += 1
+            batch = df_original.iloc[start:end]
+            futures = []
 
-            for mr in ALL_MRs:
-                futures.append(executor.submit(
-                    process_single_mutation, row_dict, mr))
+            for index, row in batch.iterrows():
+                row_dict = row.to_dict()
 
-        for f in tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc="Gerando mutações"):
-            mutated_fields = f.result()
-            results.append(mutated_fields)
-            counter += 1
+                if (index, "original") not in processed:
+                    original_fields = row_dict.copy()
+                    original_fields["original_index"] = index
+                    original_fields["applied_mr"] = "original"
+                    results.append(original_fields)
+                    counter += 1
 
-            if counter % 3000 == 0:
-                print(f"Salvando progresso com {counter} mutações...")
+                for mr in ALL_MRs:
+                    print("current mr",mr)
+                    if (index, mr) not in processed:
+                        futures.append(executor.submit(
+                            process_single_mutation, row_dict, mr))
+
+            for f in tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc="Gerando mutações"):
+                mutated_fields = f.result()
+                results.append(mutated_fields)
+                counter += 1
+
+                if counter % 2000 == 0:
+                    print(f"Salvando progresso com {counter} mutações...")
+                    save_partial_results(results, output_tsv)
+                    results.clear()
+
+            if results:
+                print(f"Salvando progresso final com {counter} mutações...")
                 save_partial_results(results, output_tsv)
-                results.clear()
-
-    if results:
-        print(f"Salvando progresso final com {counter} mutações...")
-        save_partial_results(results, output_tsv)
 
     print(f"Tabela de mutações salva em: {output_tsv}")
 
